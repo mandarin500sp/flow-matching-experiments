@@ -7,50 +7,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F 
 import math 
-
-def get_time_embeddings(time_steps, time_emb_dim):
-    """
-    Convert time steps tensor into an embedding using the sinusoidal time embedding formula
-
-    Arguments: 
-        time_steps -- 1D tensor of length batch size
-        time_emb_dim -- dimension of the embedding
-    
-    Returns: 
-        t_emb -- (B x D) embedding representation of B time steps
-
-    Comments: 
-        The sinusoidal positional econding used in Attention Is All You Need (https://arxiv.org/pdf/1706.03762) is 
-                                                                        PE(pos,2i) = sin( pos / 10000^(2i/dmodel) )
-                                                                        PE(pos,2i+1) = cos( pos / 10000^(2i/dmodel) )
-        Notice that at highest frequencies (i.e. i = 0), for a value of t ∈ [0,1) as in our case, the values of PE(pos,2*0) ∈ [0, sin(1)), generating embeddings that are not sufficiently
-        distinguishable by the NN if t + ε is close to t. In order to address this problem, we multiply the argument of the positional encoders by a factor of 1000. This translates in 
-        going through half a wavelenght, for i = 0, by an increase in t from t to t + ε, with ε = 0.00314; e.g. if PE(t, 0) = sin(1000*t) = 1, then PE(t+ε, 0) = sin(1000*(t+ε)) = -1, which
-        is a desirable property of our time embedding function. 
-        Furthermore, at inference time (flow_matching.flow_matching function), using an integration step of 300 results in dt = 1/300, hence if PE(t, 0) = sin(1000*t) 
-        then PE(t+dt, 0) = sin(1000*(t+dt)) ≈ 3.33 which leads to half an oscillation in the first entry of our time embedding vector, meaning that an integration step of 300 is a 
-        well calibrated increment for the integration process, givin substantial information about the flow direction at every step.  
-    """
-    assert time_emb_dim % 2 == 0, "time embedding dimension must be divisible by 2"
-
-    #Scale in order to cover larger portion
-    time_steps = time_steps * 1000
-    #factor = 10000^(2i/d_model)
-    factor = 10000 ** ((torch.arange(
-        start=0, end=time_emb_dim // 2) / (time_emb_dim //2))
-    )
-
-    #time/factor
-    t_embs = time_steps[:, None].repeat(1, time_emb_dim // 2) / factor
-    t_embs = torch.cat([torch.sin(t_embs), torch.cos(t_embs)], dim=-1)
-    return t_embs
+from utils import get_time_embeddings
 
 class UNet_VF(nn.Module): 
     """
     Starting from a UNet, we integrate time into the model, through a Time Embedding. 
-    References are the paper Attention is all you need and the following repositories:
-    https://github.com/roatienza/Deep-Learning-Experiments/blob/master/versions/2025/diffusion/demo/flow_match.ipynb
-    https://github.com/explainingai-code/DDPM-Pytorch/blob/main/models/unet_base.py
+    References are the papers
+        U-Net: Convolutional Networks for Biomedical Image Segmentation
+        Attention is all you need (for the Time Embedding)
+    and the following repositories:
+        https://github.com/roatienza/Deep-Learning-Experiments/blob/master/versions/2025/diffusion/demo/flow_match.ipynb
+        https://github.com/explainingai-code/DDPM-Pytorch/blob/main/models/unet_base.py
     """
     def __init__(self, n_channels, time_emb_dim): 
         super().__init__()
@@ -86,7 +53,7 @@ class UNet_VF(nn.Module):
     def forward(self, x, time_steps): 
         assert x.size(0) == time_steps.size(0), "batch size and time steps number should be equal"
         
-        t_embs = get_time_embeddings(time_steps, self.time_emb_dim)
+        t_embs = get_time_embeddings(time_steps, self.time_emb_dim, scale_factor=1000)
         t_embs = self.time_mlp(t_embs)
         
         #Encode with time injection, then decode
