@@ -49,7 +49,7 @@ class Flow(nn.Module):
         return self.net(torch.cat((x_t, t_emb), dim=-1))
 
 
-def main(dataloader=None, B=None, epochs=None, train=True, n_samples=None, flow=None, encoder=None, decoder=None, latent_dim=1024, hidden_dim=512, time_emb_dim=64, lr=1e-3, save_model_every=10, integration_steps=100):
+def main(dataloader=None, B=None, epochs=None, train=True, n_samples=None, flow=None, encoder=None, decoder=None, latent_dim=1024, hidden_dim=512, time_emb_dim=64, lr=1e-3, save_model_every=10, integration_steps=100, device=None):
     if train:
         #Create training output dirs
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
@@ -70,9 +70,9 @@ def main(dataloader=None, B=None, epochs=None, train=True, n_samples=None, flow=
             f.write(f"INTEGRATION_STEPS : {integration_steps}\n")
 
         if flow is None:
-            flow = Flow(latent_dim, hidden_dim, time_emb_dim)
+            flow = Flow(latent_dim, hidden_dim, time_emb_dim).to(device)
 
-        loss_log = train_FM(epochs, flow, encoder, decoder, dataloader, lr, weights_dir, images_dir, n_samples, save_model_every, integration_steps)
+        loss_log = train_FM(epochs, flow, encoder, decoder, dataloader, lr, weights_dir, images_dir, n_samples, save_model_every, integration_steps, device)
 
         epoch_losses_path = os.path.join(save_dir, "epoch_losses.txt")
         epoch_rel_losses_path = os.path.join(save_dir, "epoch_rel_losses.txt")
@@ -90,13 +90,13 @@ def main(dataloader=None, B=None, epochs=None, train=True, n_samples=None, flow=
         images_dir = f"LatentFM_TEST-{timestamp}"
         os.makedirs(images_dir)
 
-        latent_fm(flow, decoder, latent_dim, images_dir, integration_steps, n_samples)
+        latent_fm(flow, decoder, latent_dim, images_dir, integration_steps, n_samples, device=device)
 
 
-def train_FM(epochs, flow, encoder, decoder, dataloader, lr, weights_dir, images_dir, n_samples, save_model_every, integration_steps):
+def train_FM(epochs, flow, encoder, decoder, dataloader, lr, weights_dir, images_dir, n_samples, save_model_every, integration_steps, device):
     optimizer = torch.optim.Adam(flow.parameters(), lr=lr)
     """
-    Trains the latent Flow. 
+    Trains the latent Flow.
     """
 
     encoder.eval()
@@ -117,6 +117,8 @@ def train_FM(epochs, flow, encoder, decoder, dataloader, lr, weights_dir, images
         epoch_target_energy = 0.0
 
         for batch in dataloader:
+            batch = batch.to(device)
+
             with torch.no_grad():
                 x_1 = encoder(batch)
 
@@ -124,7 +126,7 @@ def train_FM(epochs, flow, encoder, decoder, dataloader, lr, weights_dir, images
             x_0 = torch.randn_like(x_1)
 
             #sample t ~ Uniform(0,1)
-            t = torch.rand(len(x_1), 1)
+            t = torch.rand(len(x_1), 1, device=device)
 
             #x_t obtained as interpolation by t of x_0 and x_1
             x_t = (1-t) * x_0 + t * x_1
@@ -170,12 +172,12 @@ def train_FM(epochs, flow, encoder, decoder, dataloader, lr, weights_dir, images
             model_save_path = os.path.join(weights_dir, f"epoch_{epoch+1}_loss={avg_epoch_loss:.5f}.pt")
             torch.save(flow.state_dict(), model_save_path)
 
-            latent_fm(flow, decoder, x_1.size(1), images_dir, integration_steps, n_samples, True, epoch+1)
+            latent_fm(flow, decoder, x_1.size(1), images_dir, integration_steps, n_samples, True, epoch+1, device)
 
     return loss_log
 
 
-def latent_fm(model, decoder, latent_dim, save_dir, integration_steps=100, n_samples=4, training_mode=False, epoch=None):
+def latent_fm(model, decoder, latent_dim, save_dir, integration_steps=100, n_samples=4, training_mode=False, epoch=None, device=None):
     """
     Integrates the vector field in [0,1] with initial condition x0 ~ N(0,I) using the Euler method. Outputs the
     generated image.
@@ -184,12 +186,12 @@ def latent_fm(model, decoder, latent_dim, save_dir, integration_steps=100, n_sam
     decoder.eval()
 
     with torch.no_grad():
-        x_t = torch.randn(n_samples, latent_dim)
+        x_t = torch.randn(n_samples, latent_dim, device=device)
         dt = 1.0 / integration_steps
 
         #Euler method
         for i in range(integration_steps):
-            t = torch.full((n_samples, 1), fill_value=i/integration_steps)
+            t = torch.full((n_samples, 1), fill_value=i/integration_steps, device=device)
             v = model(x_t, t)
             x_t = x_t + v * dt
 
@@ -202,12 +204,14 @@ def latent_fm(model, decoder, latent_dim, save_dir, integration_steps=100, n_sam
             else:
                 img_path = os.path.join(save_dir, f"sample_{i}.png")
 
-            torchvision.utils.save_image(out[i], img_path)
+            torchvision.utils.save_image(out[i].cpu(), img_path)
 
         return out
 
 
 if __name__ == "__main__":
+    DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+
     B = 16
     EPOCHS = 300
     LATENT_DIM = 1024
@@ -218,12 +222,12 @@ if __name__ == "__main__":
     N_SAMPLES = 4
     INTEGRATION_STEPS = 100
 
-    encoder = Encoder(3, LATENT_DIM)
-    decoder = Decoder(3, LATENT_DIM)
-    flow = Flow(LATENT_DIM, FLOW_HIDDEN_DIM, T_EMB_DIM)
+    encoder = Encoder(3, LATENT_DIM).to(DEVICE)
+    decoder = Decoder(3, LATENT_DIM).to(DEVICE)
+    flow = Flow(LATENT_DIM, FLOW_HIDDEN_DIM, T_EMB_DIM).to(DEVICE)
 
-    ae_weights = torch.load("AUTOENCODER.pt")
-    #flow_weights = torch.load("FLOW.pt")
+    ae_weights = torch.load("AUTOENCODER_MSE.pt", map_location=DEVICE)
+    #flow_weights = torch.load("FLOW.pt", map_location=DEVICE)
 
     encoder.load_state_dict(ae_weights["encoder"])
     decoder.load_state_dict(ae_weights["decoder"])
@@ -240,4 +244,4 @@ if __name__ == "__main__":
     dataset = ImageToTensor(ds[:]["image"], transform)
     dataloader = DataLoader(dataset, batch_size=B, shuffle=True)
 
-    main(dataloader, B, EPOCHS, True, N_SAMPLES, flow, encoder, decoder, LATENT_DIM, FLOW_HIDDEN_DIM, T_EMB_DIM, LR, SAVE_MODEL_EVERY, INTEGRATION_STEPS)
+    main(dataloader, B, EPOCHS, True, N_SAMPLES, flow, encoder, decoder, LATENT_DIM, FLOW_HIDDEN_DIM, T_EMB_DIM, LR, SAVE_MODEL_EVERY, INTEGRATION_STEPS, DEVICE)
