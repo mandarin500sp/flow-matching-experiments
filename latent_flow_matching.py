@@ -16,7 +16,7 @@ from autoencoder import Encoder, Decoder
 
 class Flow(nn.Module):
     """
-    The parametrizing the vector field. As in the UNet-VF model, we use a time embedding to enhance training performance.
+    The model parametrizing the vector field. As in the UNet-VF model, we use a time embedding to enhance training performance.
     Once the flow is learned, one can integrate it over [0,1] with initial codition x0 to generate new samples.
     """
     def __init__(self, latent_dim, hidden_dim, time_emb_dim=64):
@@ -219,19 +219,19 @@ if __name__ == "__main__":
     T_EMB_DIM = 128
     LR = 1e-3
     SAVE_MODEL_EVERY = 5
-    N_SAMPLES = 4
+    N_SAMPLES = 10
     INTEGRATION_STEPS = 100
 
     encoder = Encoder(3, LATENT_DIM).to(DEVICE)
     decoder = Decoder(3, LATENT_DIM).to(DEVICE)
     flow = Flow(LATENT_DIM, FLOW_HIDDEN_DIM, T_EMB_DIM).to(DEVICE)
 
-    ae_weights = torch.load("AUTOENCODER_MSE.pt", map_location=DEVICE)
-    #flow_weights = torch.load("FLOW.pt", map_location=DEVICE)
+    ae_weights = torch.load("AUTOENCODER.pt", map_location=DEVICE)
+    flow_weights = torch.load("FLOW.pt", map_location=DEVICE)
 
     encoder.load_state_dict(ae_weights["encoder"])
     decoder.load_state_dict(ae_weights["decoder"])
-    #flow.load_state_dict(flow_weights)
+    flow.load_state_dict(flow_weights)
 
     ds = load_dataset("huggan/smithsonian_butterflies_subset", split="train[:800]")
 
@@ -244,4 +244,4 @@ if __name__ == "__main__":
     dataset = ImageToTensor(ds[:]["image"], transform)
     dataloader = DataLoader(dataset, batch_size=B, shuffle=True)
 
-    main(dataloader, B, EPOCHS, True, N_SAMPLES, flow, encoder, decoder, LATENT_DIM, FLOW_HIDDEN_DIM, T_EMB_DIM, LR, SAVE_MODEL_EVERY, INTEGRATION_STEPS, DEVICE)
+    main(dataloader, B, EPOCHS, False, N_SAMPLES, flow, encoder, decoder, LATENT_DIM, FLOW_HIDDEN_DIM, T_EMB_DIM, LR, SAVE_MODEL_EVERY, INTEGRATION_STEPS, DEVICE)

@@ -44,17 +44,17 @@ if __name__ == "__main__":
     W = 128
 
     BATCH_SIZE = 64
-    LATENT_DIM = 1024
+    LATENT_DIM = 256
 
     encoder = Encoder(C, LATENT_DIM).to(DEVICE)
     decoder = Decoder(C, LATENT_DIM).to(DEVICE)
 
-    ae_weights = torch.load("AUTOENCODER.pt", map_location=DEVICE)
+    ae_weights = torch.load("AUTOENCODER_256.pt", map_location=DEVICE)
 
     encoder.load_state_dict(ae_weights["encoder"])
     decoder.load_state_dict(ae_weights["decoder"])
 
-    ds = load_dataset("huggan/smithsonian_butterflies_subset", split="train[800:]")
+    ds = load_dataset("huggan/smithsonian_butterflies_subset", split="train[:800]")
 
     transform = transforms.Compose([
                 transforms.Resize((H, W)),

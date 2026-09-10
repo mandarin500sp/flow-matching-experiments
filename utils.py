@@ -20,6 +20,7 @@ class ImageToTensor(Dataset):
     def __getitem__(self, idx): 
         return self.transform(self.image_dataset[idx])
 
+
 def get_time_embeddings(time_steps, time_emb_dim, scale_factor):
     """
     Convert time steps tensor into an embedding using the sinusoidal time embedding formula

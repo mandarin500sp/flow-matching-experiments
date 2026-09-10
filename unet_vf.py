@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import math 
 from utils import get_time_embeddings
 
+
 class UNet_VF(nn.Module): 
     """
     Starting from a UNet, we integrate time into the model, through a Time Embedding. 
@@ -72,6 +73,7 @@ class UNet_VF(nn.Module):
         field = self.outc(x_up)
         return field
 
+
 class DoubleConv(nn.Module): 
     """
     Performs a Convolution followed by a GN and a SiLU. Then, injects time in the embedding by projecting it onto the embedding's channels and applying a Conv + SiLU + Activation to it.  
@@ -100,7 +102,8 @@ class DoubleConv(nn.Module):
         h = h + self.time_proj(t_emb)[:, :, None, None] #projecting time onto embedding's channels
         h = self.conv2(h)
         return h
-    
+
+
 class Down(nn.Module):
     """Downscales input with a maxpool, then performs a DoubleConv."""
     def __init__(self, in_channels, out_channels, time_emb_dim): 
@@ -110,6 +113,7 @@ class Down(nn.Module):
     
     def forward(self, x, t_emb):
         return self.conv(self.maxpool(x), t_emb)
+
 
 class Up(nn.Module): 
     """

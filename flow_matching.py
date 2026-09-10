@@ -171,7 +171,7 @@ if __name__ == "__main__":
     T_EMB_DIM = 128
     LR = 1e-3
     SAVE_MODEL_EVERY = 4
-    N_SAMPLES = 4
+    N_SAMPLES = 10
     INTEGRATION_STEPS = 100
 
     ds = load_dataset("huggan/smithsonian_butterflies_subset", split="train[:800]")
@@ -185,4 +185,7 @@ if __name__ == "__main__":
     dataset = ImageToTensor(ds[:]["image"], transform)
     dataloader = DataLoader(dataset, batch_size=B, shuffle=True)
 
-    main(C, H, W, dataloader, DEVICE, B, EPOCHS, True, N_SAMPLES, None, T_EMB_DIM, LR, SAVE_MODEL_EVERY, INTEGRATION_STEPS)
+    model = UNet_VF(C, T_EMB_DIM).to(DEVICE)
+    model.load_state_dict(torch.load("PIXEL.pt", map_location=DEVICE))
+
+    main(C, H, W, dataloader, DEVICE, B, EPOCHS, False, N_SAMPLES, model, T_EMB_DIM, LR, SAVE_MODEL_EVERY, INTEGRATION_STEPS)

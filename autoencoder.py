@@ -126,8 +126,10 @@ def train(num_epochs, encoder, decoder, dataloader, lr, save_model_every, device
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
     save_dir = f"AUTOENCODER_MODEL-{timestamp}"
     weights_dir = os.path.join(save_dir, "weights")
+    reconstructions_dir = os.path.join(save_dir, "reconstructions")
 
     os.makedirs(weights_dir)
+    os.makedirs(reconstructions_dir)
 
     loss_file = os.path.join(save_dir, "loss.txt")
 
@@ -170,6 +172,15 @@ def train(num_epochs, encoder, decoder, dataloader, lr, save_model_every, device
                 "decoder": decoder.state_dict(),
             }, model_save_path)
 
+            reconstruction_save_path = os.path.join(reconstructions_dir, f"epoch_{epoch+1}.png")
+
+            save_image(
+                recons.detach().cpu(),
+                reconstruction_save_path,
+                normalize=True,
+                value_range=(-1, 1)
+            )
+
 
 def test(encoder, decoder, dataloader, device):
     encoder.eval()
@@ -203,6 +214,7 @@ def test(encoder, decoder, dataloader, device):
 
 if __name__ == "__main__":
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    #device = torch.device("cpu")
 
     C = 3
     H = 128

@@ -43,7 +43,7 @@ def latent_sample(flow, decoder, n_samples, latent_dim, steps):
 
 def test_kid(pixel_model, flow, decoder, dataset, batch_size, feature, subsets, subset_size, C, H, W, latent_dim, steps, device):
     kid_pixel = KID(feature=feature, subsets=subsets, subset_size=subset_size, normalize=True)
-    kid_latent = KID(feature=feature, subsets=subsets, subset_size=subset, normalize=True)
+    kid_latent = KID(feature=feature, subsets=subsets, subset_size=subset_size, normalize=True)
 
     real = torch.stack([dataset[i] for i in range(len(dataset))])
 
@@ -90,23 +90,23 @@ if __name__ == "__main__":
 
     LATENT_DIM = 1024
     FLOW_HIDDEN_DIM = 512
-    LATENT_T_EMB_DIM = 64
+    LATENT_T_EMB_DIM = 128
 
     INTEGRATION_STEPS = 100
 
     pixel_model = UNet_VF(C, PIXEL_T_EMB_DIM).to(DEVICE)
-    pixel_model.load_state_dict(torch.load("PIXEL_800.pt", map_location=DEVICE))
+    pixel_model.load_state_dict(torch.load("PIXEL.pt", map_location=DEVICE))
 
     decoder = Decoder(C, LATENT_DIM)
     flow = Flow(LATENT_DIM, FLOW_HIDDEN_DIM, LATENT_T_EMB_DIM)
 
     ae_weights = torch.load("AUTOENCODER.pt", map_location="cpu")
-    flow_weights = torch.load("LATENT_800.pt", map_location="cpu")
+    flow_weights = torch.load("FLOW.pt", map_location="cpu")
 
     decoder.load_state_dict(ae_weights["decoder"])
     flow.load_state_dict(flow_weights)
 
-    ds = load_dataset("huggan/smithsonian_butterflies_subset", split="train[:800]")
+    ds = load_dataset("huggan/smithsonian_butterflies_subset", split="train[800:]")
 
     transform = transforms.Compose([
         transforms.Resize((H, W)),
