@@ -15,8 +15,8 @@ Dependencies:
 * **`matplotlib`**
 * **`numpy`** 
 
-# Images generated with the latent-space model:
+### Images generated with the latent-space model:
 <img width="1302" height="1302" alt="latent_grid" src="https://github.com/user-attachments/assets/59c531ab-04f4-402b-a412-e76b542528bc" />
 
-# Images generated with the pixel-space model:
+### Images generated with the pixel-space model:
 <img width="1302" height="1302" alt="pixel_grid" src="https://github.com/user-attachments/assets/44599ef1-37ea-4451-b3ba-abe2c16c3383" />
