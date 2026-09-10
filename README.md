@@ -4,6 +4,7 @@ This repository provides an implementation and comparative analysis of the Flow 
 The project explores learning vector fields in two distinct representation spaces:
 - Operating directly in **pixel space**
 - Operating in a lower-dimensional **latent space**
+  
 Please read *Relation.pdf* for further details. 
 
 Dependencies:
