@@ -2,9 +2,8 @@
 
 This repository provides an implementation and comparative analysis of the Flow Matching generative modeling paradigm for image generation. 
 The project explores learning vector fields in two distinct representation spaces:
-- Operating directly in **pixel space**, parameterizing the vector field via a time-conditioned UNet architecture.
-- Operating in a lower-dimensional **latent space**, first mapping images with a ResNet-type autoencoder and then learning the flow using a lightweight MLP.
-
+- Operating directly in **pixel space**
+- Operating in a lower-dimensional **latent space**
 Please read *Relation.pdf* for further details. 
 
 Dependencies:
